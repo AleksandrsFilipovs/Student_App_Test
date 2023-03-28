@@ -11,10 +11,15 @@ import org.testng.Assert;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
+import page_object.AddStudentPage;
+import page_object.AllStudentsPage;
+import page_object.Notifications;
 
 import java.time.Duration;
 
+import static Constants.AllConstants.GenderConstants.MALE;
 import static org.testng.Assert.assertTrue;
+import static org.testng.AssertJUnit.assertEquals;
 
 public class StudentAppTest {
 
@@ -22,6 +27,10 @@ public class StudentAppTest {
     WebDriverWait driverWait;
 
     Faker dataFaker = new Faker();
+    AllStudentsPage allStudentsPage;
+
+    AddStudentPage addStudentPage;
+    Notifications notifications;
 
     private final String APP_URL = "http://app.acodemy.lv/";
 
@@ -32,6 +41,9 @@ public class StudentAppTest {
         driver = new ChromeDriver(options);
         driverWait = new WebDriverWait(driver, Duration.ofSeconds(10));
         driver.get(APP_URL);
+        allStudentsPage =new AllStudentsPage(driver);
+        addStudentPage = new AddStudentPage(driver);
+        notifications = new Notifications(driver);
 
     }
     @AfterMethod
@@ -40,38 +52,19 @@ public class StudentAppTest {
         driver.quit();
     }
 
-    @Test
+    @Test(description = "Add student and check successful message")
     public void openStudentApp() {
 
-        driverWait.until(ExpectedConditions.elementToBeClickable(By.xpath("//div[@class='ant-table-title']//button")));
-        WebElement addStudentButton = driver.findElement(By.xpath("//div[@class='ant-table-title']//button"));
-        addStudentButton.click();
-        driverWait.until(ExpectedConditions.visibilityOfElementLocated(By.id("name")));
-        WebElement nameField = driver.findElement(By.id("name"));
-        String name = dataFaker.pokemon().name();
-        nameField.sendKeys(name);
-        WebElement emailField = driver.findElement(By.id("email"));
-        String email = dataFaker.internet().emailAddress();
-        emailField.sendKeys(email);
-        //driver.findElement(By.xpath("//div[@class='ant-form-item-control-input-content']//button")).click();
-        WebElement genderField =driver.findElement(By.id("gender"));
-        genderField.click();
-        driverWait.until(ExpectedConditions.visibilityOfElementLocated(By.xpath("//div[@title='OTHER']")));
-        WebElement valueFromDropdown = driver.findElement(By.xpath("//div[@title='OTHER']"));
-        valueFromDropdown.click();
-        WebElement submitButton = driver.findElement(By.xpath("//div[@class='ant-form-item-control-input-content']//button"));
-        submitButton.click();
+        allStudentsPage.waitAndClickOnAddStudentButton();
+        String name = addStudentPage.waitAndSetValueForNameField();
+        addStudentPage.waitAndSetValueForEmailField();
+        addStudentPage.waitAndSetGender(MALE);
+        addStudentPage.clickOnSubmitButton();
 
-        driverWait.until(ExpectedConditions.visibilityOfElementLocated(By.className("ant-notification-notice-message")));
-        WebElement notificationMessage = driver.findElement(By.className("ant-notification-notice-message"));
-        WebElement notificationDescription = driver.findElement(By.className("ant-notification-notice-description"));
-        Assert.assertEquals(notificationMessage.getText(), "Student successfully added");
-        Assert.assertEquals(notificationDescription.getText(),  name + " was added to the system");
+        assertEquals(notifications.getMessageFromNotification(), "Student successfully added");
+        assertEquals(notifications.getDescriptionFromNotification(), name + " was added to the system");
 
-        WebElement popUpCloseButton = driver.findElement(By.className("ant-notification-notice-close"));
-        popUpCloseButton.click();
-        assertTrue(driverWait.until(ExpectedConditions.invisibilityOf(popUpCloseButton)));
-
-
+        notifications.getPopUpCloseButton().click();
+        assertTrue(driverWait.until(ExpectedConditions.invisibilityOf(notifications.getPopUpCloseButton())));
     }
 }
