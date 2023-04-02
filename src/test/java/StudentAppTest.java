@@ -1,62 +1,62 @@
 import com.github.javafaker.Faker;
-import org.openqa.selenium.By;
+import org.openqa.selenium.JavascriptExecutor;
 import org.openqa.selenium.WebDriver;
-import org.openqa.selenium.WebElement;
-import org.openqa.selenium.chrome.ChromeDriver;
-import org.openqa.selenium.chrome.ChromeOptions;
 
 import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.WebDriverWait;
-import org.testng.Assert;
+import org.testng.ITestResult;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 import page_object.AddStudentPage;
 import page_object.AllStudentsPage;
 import page_object.Notifications;
+import utils.DriverManager;
 
+import java.lang.reflect.Method;
 import java.time.Duration;
 
 import static Constants.AllConstants.GenderConstants.MALE;
+import static org.openqa.selenium.net.LinuxEphemeralPortRangeDetector.getInstance;
 import static org.testng.Assert.assertTrue;
 import static org.testng.AssertJUnit.assertEquals;
+import static utils.ConfigHelper.getConfig;
+import static utils.DriverManager.closeDriver;
+import static utils.DriverManager.markRemoteTest;
 
 public class StudentAppTest {
 
-    WebDriver driver;
-    WebDriverWait driverWait;
 
-    Faker dataFaker = new Faker();
-    AllStudentsPage allStudentsPage;
 
-    AddStudentPage addStudentPage;
-    Notifications notifications;
+    private WebDriver driver;
+    private WebDriverWait driverWait;
+    private final Faker dataFaker = new Faker();
+    private AllStudentsPage allStudentsPage;
+    private AddStudentPage addStudentPage;
+    private Notifications notifications;
 
-    private final String APP_URL = "http://app.acodemy.lv/";
 
     @BeforeMethod
-    public void initialize () {
-        ChromeOptions options = new ChromeOptions();
-        options.addArguments("--remote-allow-origins=*");
-        driver = new ChromeDriver(options);
+    public void initialize (Method method) {
+
         driverWait = new WebDriverWait(driver, Duration.ofSeconds(10));
-        driver.get(APP_URL);
-        allStudentsPage =new AllStudentsPage(driver);
-        addStudentPage = new AddStudentPage(driver);
-        notifications = new Notifications(driver);
+        driver.get(getConfig().getString("student.app.hostname"));
+        allStudentsPage =new AllStudentsPage();
+        addStudentPage = new AddStudentPage();
+        notifications = new Notifications();
 
     }
-    @AfterMethod
-    public void tearDown() {
-        driver.close();
-        driver.quit();
+    @AfterMethod(alwaysRun = true)
+    public void tearDown(ITestResult result) {
+        if (!getConfig().getBoolean("student.app.run.locally")) markRemoteTest(result);
+        closeDriver();
     }
 
     @Test(description = "Add student and check successful message")
     public void openStudentApp() {
-
         allStudentsPage.waitAndClickOnAddStudentButton();
-        String name = addStudentPage.waitAndSetValueForNameField();
+        String name = dataFaker.name().firstName();
+        addStudentPage.waitAndSetValueForNameField(name);
         addStudentPage.waitAndSetValueForEmailField();
         addStudentPage.waitAndSetGender(MALE);
         addStudentPage.clickOnSubmitButton();
@@ -67,4 +67,5 @@ public class StudentAppTest {
         notifications.getPopUpCloseButton().click();
         assertTrue(driverWait.until(ExpectedConditions.invisibilityOf(notifications.getPopUpCloseButton())));
     }
+
 }
